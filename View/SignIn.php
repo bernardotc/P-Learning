@@ -9,6 +9,7 @@ $login = '';
 $home = '';
 $signin = 'class="active"';
 $typeOfUser = "Course Administrator";
+$institutionName = '';
 ?>
 <style>
     form {

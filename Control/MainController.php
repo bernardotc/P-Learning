@@ -11,31 +11,33 @@ require("../Model/Course.php");
 
 session_start();
 
-$user = $_SESSION["user"];
-$newUser = $_SESSION["newUser"];
-$course = $_SESSION["course"];
 $do = $_GET["do"];
 
 switch ($do) {
     case "newCourseAdministrator":
         // Save user in database
-        //$user->saveInDatabase();
+        $_SESSION["user"]->saveInDatabase();
         header("Location: ../View/Home.php");
         break;
     case "newStudent":
         // Save user in database
-        //$newUser->saveInDatabase();
+        $_SESSION["newUser"]->saveInDatabase($_SESSION["user"]->institutionId);
+        unset($_SESSION["newUser"]);
         header("Location: ../View/Home.php");
         break;
     case "newTeacher":
         // Save user in database
-        //$newUser->saveInDatabase();
+        $_SESSION["newUser"]->saveInDatabase($_SESSION["user"]->institutionId);
+        unset($_SESSION["newUser"]);
         header("Location: ../View/Home.php");
         break;
     case "newCourse":
-        // Save user in database
-        //$course->saveInDatabase();
+        $_SESSION["course"]->saveInDatabase($_SESSION["user"]->courseAdministratorId);
+        unset($_SESSION["course"]);
         header("Location: ../View/Home.php");
+        break;
+    case "enrollment":
+        header("Location: ../Control/EnrollTeachersAndStudents.php");
         break;
     case "login":
         header("Location: ../View/Home.php");

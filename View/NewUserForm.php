@@ -15,8 +15,12 @@ if ($mysqli->connect_errno) {
     echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
 }
 
-$firstNameErr = $lastNameErr = $emailErr = $usernameErr = $passwordErr = $confirmPasswordErr = "";
-$firstName = $lastName = $email = $username = $password = $confirmPassword = "";
+$firstNameErr = $lastNameErr = $emailErr = $usernameErr = $passwordErr = $confirmPasswordErr = $institutionErr = "";
+$firstName = $lastName = $email = $username = $password = $confirmPassword = $institution =  "";
+
+if (isset($_SESSION["user"]) && $_SESSION["user"]->institutionName != "") {
+    $institution = $_SESSION["user"]->institutionName;
+}
 
 function test_input($data) {
     $data = trim($data);
@@ -90,12 +94,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $confirmPasswordErr .= "Both passwords were not the same.";
     }
 
-    if ($firstNameErr.$lastNameErr.$emailErr.$usernameErr.$passwordErr.$confirmPasswordErr == "") {
+    if (empty($_POST["institution"]) && $institution == "") {
+        $institutionErr = "Institution is required.";
+    } else if (strlen($_POST["institution"]) > 50) {
+        $institutionErr .= "Institution is too long.";
+    } else {
+        if ($institution == "") {
+            $institution = test_input($_POST["institution"]);
+        }
+    }
+
+    if ($firstNameErr.$lastNameErr.$emailErr.$usernameErr.$passwordErr.$confirmPasswordErr.$institutionErr == "") {
         $userClass = str_replace(" ", "",$typeOfUser);
-        $user = new $userClass($firstName, $lastName, $email, $username, $password);
+        $user = new $userClass($firstName, $lastName, $email, $username, $password, $institution);
         //print_r($user);
-        if ($typeOfUser == "CourseAdministrator") {
+        //print_r($_SESSION["user"]);
+        if ($userClass == "CourseAdministrator") {
             $_SESSION["user"] = $user;
+            //print_r($user);
         } else {
             $_SESSION["newUser"] = $user;
         }
@@ -149,6 +165,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="col-lg-9">
                     <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" required>
                     <span class="text-danger"><?php echo $confirmPasswordErr ?></span>
+                </div>
+            </div>
+            <div class="form-group <?php if($institutionErr != "") { echo "has-error"; }?>">
+                <label for="institution" class="control-label col-lg-3">Institution</label>
+                <div class="col-lg-9">
+                    <input type="text" class="form-control" <?php if($institution != "") {echo "disabled";} ?> id="institution" name="institution" placeholder="University, Organization, etc." value="<?php echo $institution ?>" required>
+                    <span class="text-danger"><?php echo $institutionErr ?></span>
                 </div>
             </div>
         </div>

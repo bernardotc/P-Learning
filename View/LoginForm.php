@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if ($usernameErr.$passwordErr == "") {
-        $i = $f = $l = $e = $u = $p = $specialId = $user = null;
+        $i = $f = $l = $e = $u = $p = $specialId = $institutionId = $institutionName = $user = null;
         $mysqli = new mysqli("localhost", "root", "", "p-learning");
         if ($mysqli->connect_errno) {
             echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $statement->execute();
         $result = $statement->get_result();
         while ($row = $result->fetch_row()) {
-            print_r($row);
+            //print_r($row);
             $i = $row[0];
             $f = $row[1];
             $l = $row[2];
@@ -54,26 +54,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $passwordErr .= "Incorrect username or password.";
         } else {
             $statement->close();
-            $statement = $mysqli->prepare("SELECT id, \"CourseAdministrator\" FROM CourseAdministrators WHERE user = ?\n"
+            $statement = $mysqli->prepare("SELECT id, \"CourseAdministrator\", institution FROM CourseAdministrators WHERE user = ?\n"
                 . "UNION\n"
-                . "SELECT id, \"SystemAdministrator\" FROM SystemAdministrators WHERE user = ?\n"
+                . "SELECT id, \"SystemAdministrator\", institution FROM SystemAdministrators WHERE user = ?\n"
                 . "UNION\n"
-                . "SELECT id, \"Teacher\" FROM Teachers WHERE user = ?\n"
+                . "SELECT id, \"Teacher\", institution FROM Teachers WHERE user = ?\n"
                 . "UNION\n"
-                . "SELECT id, \"Student\" FROM Students WHERE user = ?");
+                . "SELECT id, \"Student\", institution FROM Students WHERE user = ?");
             $statement->bind_param("iiii", $i, $i, $i, $i);
             $statement->execute();
             $result = $statement->get_result();
             while ($row = $result->fetch_row()) {
                 $specialId = $row[0];
                 $userClass = $row[1];
+                $institutionId = $row[2];
             }
             if ($specialId == null) {
                 $mysqli->rollback();
                 $passwordErr .= "Incorrect username or password.";
             } else {
+                $statement->close();
+                $statement = $mysqli->prepare("SELECT name FROM Institutions WHERE id = ?");
+                $statement->bind_param("i", $institutionId);
+                $statement->execute();
+                $result = $statement->get_result();
+                while ($row = $result->fetch_row()) {
+                    $institutionName = $row[0];
+                }
                 $mysqli->commit();
-                $user = new $userClass($i, $f, $l, $e, $u, $p, $specialId);
+                $user = new $userClass($i, $f, $l, $e, $u, $p, $specialId, $institutionName, $institutionId);
             }
         }
         $mysqli->close();
