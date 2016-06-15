@@ -5,14 +5,21 @@
  * Date: 5/28/16
  * Time: 1:26 PM
  */
+require("../Model/Course.php");
+require("../Model/User.php");
 
 session_start();
-
-require("../Model/Course.php");
 
 $login = '';
 $home = 'class="active"';
 $signin = '';
+
+$user = $_SESSION["user"];
+if ($user == null ) {
+    header("Location: ../Control/MainController.php?do=logout");
+} else if (!($user instanceof CourseAdministrator)) {
+    header("Location: ../View/Home.php");
+}
 
 function test_input($data) {
     $data = trim($data);
@@ -36,7 +43,8 @@ if ($mysqli->connect_errno) {
     echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
 }
 $courses = array();
-$statement = $mysqli->prepare("SELECT * FROM Courses");
+$statement = $mysqli->prepare("SELECT * FROM Courses, CoursesCreated WHERE Courses.id = courseId AND courseAdministratorId = ?");
+$statement->bind_param("i", $_SESSION["user"]->courseAdministratorId);
 $statement->execute();
 $result = $statement->get_result();
 while ($row = $result->fetch_row()) {

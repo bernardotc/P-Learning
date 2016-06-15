@@ -10,6 +10,14 @@ require("../Model/User.php");
 
 session_start();
 
+if ($typeOfUser == "Course Administrator" && !isset($_SESSION["user"])) {
+    // do nothing
+} else if ($_SESSION["user"] == null) {
+    header("Location: ../Control/MainController.php?do=logout");
+} else if (($typeOfUser == "Teacher" || $typeOfUser == "Student") && ($_SESSION["user"] instanceof Teacher || $_SESSION["user"] instanceof Student)) {
+    header("Location: ../View/Home.php");
+}
+
 $mysqli = new mysqli("localhost", "root", "", "p-learning");
 if ($mysqli->connect_errno) {
     echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;

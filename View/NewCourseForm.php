@@ -7,8 +7,16 @@
  */
 
 require("../Model/Course.php");
+require("../Model/User.php");
 
 session_start();
+
+$user = $_SESSION["user"];
+if ($user == null ) {
+    header("Location: ../Control/MainController.php?do=logout");
+} else if (!($user instanceof CourseAdministrator)) {
+    header("Location: ../View/Home.php");
+}
 
 $titleErr = $codeErr = $descriptionErr = "";
 $title = $code = $description = "";
@@ -45,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($titleErr.$codeErr.$descriptionErr == "") {
         $course = new Course($title, $code, $description);
-        $_SESSION["course"] = $course;
+        $_SESSION["newCourse"] = $course;
         // Redirect
         header("Location: ../Control/MainController.php?do=newCourse");
     }

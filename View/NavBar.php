@@ -26,6 +26,9 @@
             </ul>
                 <?php } else { ?>
                     <li <?php echo $home ?>><a href="Home.php">Home<span class="sr-only">(current)</span></a></li>
+                    <?php if ($course != null) { ?>
+                        <li <?php echo $courseActive ?>><a href="CourseHome.php"><?php echo $course->code." - ".$course->title ?><span class="sr-only">(current)</span></a></li>
+                    <?php } ?>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <li><a href="../Control/MainController.php?do=logout">Logout<span class="sr-only">(current)</span></a></li>

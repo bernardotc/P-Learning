@@ -8,6 +8,7 @@
 
 require("../Model/User.php");
 require("../Model/Course.php");
+require("../Model/PLContent.php");
 
 session_start();
 
@@ -32,9 +33,41 @@ switch ($do) {
         header("Location: ../View/Home.php");
         break;
     case "newCourse":
-        $_SESSION["course"]->saveInDatabase($_SESSION["user"]->courseAdministratorId);
-        unset($_SESSION["course"]);
+        $_SESSION["newCourse"]->saveInDatabase($_SESSION["user"]->courseAdministratorId);
+        unset($_SESSION["newCourse"]);
         header("Location: ../View/Home.php");
+        break;
+    case "editPLContent":
+        $_SESSION["plcontent"]->updateInDatabase();
+        unset($_SESSION["courseSectionId"]);
+        unset($_SESSION["plcontent"]);
+        unset($_SESSION["previousPLC"]);
+        unset($_SESSION["plcId"]);
+        header("Location: ../View/CourseHome.php");
+        break;
+    case "newPLContent":
+        $_SESSION["plcontent"]->saveInDatabase();
+        unset($_SESSION["courseSectionId"]);
+        unset($_SESSION["plcontent"]);
+        header("Location: ../View/CourseHome.php");
+        break;
+    case "showCourse":
+        $_SESSION["courseId"] = $_GET["courseId"];
+        header("Location: ../View/CourseHome.php");
+        break;
+    case "makeplc":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["courseSectionId"] = $_GET["courseSectionId"];
+        header("Location: ../View/MakePLContent.php");
+        break;
+    case "editplc":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["plcId"] = $_GET["plcId"];
+        header("Location: ../View/MakePLContent.php");
         break;
     case "enrollment":
         header("Location: ../Control/EnrollTeachersAndStudents.php");

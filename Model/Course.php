@@ -64,3 +64,60 @@ class Course {
         }
     }
 }
+
+class Section {
+    public $id = 0;
+    public $sectionTitle;
+    public $sectionDescription;
+    public $courseId = 0;
+    public $plcontents = array();
+
+    function __construct() {
+        $a = func_get_args();
+        $i = func_num_args();
+        if (method_exists($this,$f='__construct'.$i)) {
+            call_user_func_array(array($this,$f),$a);
+        }
+    }
+
+    function __construct4($i, $t, $d, $ci) {
+        $this->id = $i;
+        $this->sectionTitle = $t;
+        $this->sectionDescription = $d;
+        $this->courseId = $ci;
+    }
+
+    function __construct5($i, $t, $d, $ci, $pl) {
+        $this->id = $i;
+        $this->sectionTitle = $t;
+        $this->sectionDescription = $d;
+        $this->courseId = $ci;
+        $this->plcontents = $pl;
+    }
+}
+
+class Announcement {
+    public $id = 0;
+    public $announcementTitle;
+    public $announcementBody;
+    public $announcementMadeDay;
+    public $announcementLastDay;
+    public $courseId = 0;
+
+    function __construct() {
+        $a = func_get_args();
+        $i = func_num_args();
+        if (method_exists($this,$f='__construct'.$i)) {
+            call_user_func_array(array($this,$f),$a);
+        }
+    }
+
+    function __construct6($i, $t, $b, $md, $ld, $ci) {
+        $this->id = $i;
+        $this->announcementTitle = $t;
+        $this->announcementBody = $b;
+        $this->announcementMadeDay = $md;
+        $this->announcementLastDay = $ld;
+        $this->courseId = $ci;
+    }
+}
