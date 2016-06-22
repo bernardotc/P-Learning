@@ -60,7 +60,22 @@ switch ($do) {
             header("Location: ../View/Home.php");
         }
         $_SESSION["courseSectionId"] = $_GET["courseSectionId"];
+        unset($_SESSION["plcId"]);
         header("Location: ../View/MakePLContent.php");
+        break;
+    case "makeTest":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["courseSectionId"] = $_GET["courseSectionId"];
+        header("Location: ../View/NewTest.php");
+        break;
+    case "makeAssignment":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["courseSectionId"] = $_GET["courseSectionId"];
+        header("Location: ../View/NewAssignment.php");
         break;
     case "editplc":
         if (!isset($_SESSION["course"])) {
@@ -68,6 +83,20 @@ switch ($do) {
         }
         $_SESSION["plcId"] = $_GET["plcId"];
         header("Location: ../View/MakePLContent.php");
+        break;
+    case "editTest":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["testId"] = $_GET["testId"];
+        header("Location: ../View/EditTest.php");
+        break;
+    case "editAssignment":
+        if (!isset($_SESSION["course"])) {
+            header("Location: ../View/Home.php");
+        }
+        $_SESSION["assignmentId"] = $_GET["assignmentId"];
+        header("Location: ../View/EditAssignment.php");
         break;
     case "enrollment":
         header("Location: ../Control/EnrollTeachersAndStudents.php");

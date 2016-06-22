@@ -71,6 +71,8 @@ class Section {
     public $sectionDescription;
     public $courseId = 0;
     public $plcontents = array();
+    public $tests = array();
+    public $assignments = array();
 
     function __construct() {
         $a = func_get_args();
@@ -119,5 +121,31 @@ class Announcement {
         $this->announcementMadeDay = $md;
         $this->announcementLastDay = $ld;
         $this->courseId = $ci;
+    }
+}
+
+class Assignment {
+    public $id = 0;
+    public $title;
+    public $submitFiles;
+    public $lastDay;
+    public $message;
+    public $courseSectionId;
+
+    function __construct() {
+        $a = func_get_args();
+        $i = func_num_args();
+        if (method_exists($this,$f='__construct'.$i)) {
+            call_user_func_array(array($this,$f),$a);
+        }
+    }
+
+    function __construct6($i, $t, $s, $l, $m, $cs) {
+        $this->id = $i;
+        $this->title = $t;
+        $this->submitFiles = $s;
+        $this->lastDay = $l;
+        $this->message = $m;
+        $this->courseSectionId = $cs;
     }
 }

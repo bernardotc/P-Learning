@@ -72,7 +72,11 @@ class PLContent {
         $statement->bind_param('si', $this->contentTitle, $this->id);
         $statement->execute();
         foreach ($this->slides as $slide) {
-            $slide->updateInDatabase($mysqli, $this->id);
+            if($slide->id != 0) {
+                $slide->updateInDatabase($mysqli, $this->id);
+            } else {
+                $slide->saveInDatabase($mysqli, $this->id);
+            }
         }
         $mysqli->commit();
         $mysqli->close();
@@ -92,7 +96,10 @@ class PLContent {
 class Slide {
     public $id = 0;
     public $slideNumber;
+    public $slideType = "text";
     public $slideContent;
+    public $slideImage = null;
+    public $slideImageExt = null;
     public $question;
 
     function __construct() {
@@ -103,26 +110,32 @@ class Slide {
         }
     }
 
-    function __construct3($sN, $sC, $q) {
+    function __construct6($sN, $sT, $sC, $sI, $sIE, $q) {
         $this->slideNumber = $sN;
+        $this->slideType = $sT;
         $this->slideContent = $sC;
+        $this->slideImage = $sI;
+        $this->slideImageExt = $sIE;
         $this->question = $q;
     }
 
-    function __construct4($i, $sN, $sC, $q) {
+    function __construct7($i, $sN, $sT, $sC, $sI, $sIE, $q) {
         $this->id = $i;
         $this->slideNumber = $sN;
+        $this->slideType = $sT;
         $this->slideContent = $sC;
+        $this->slideImage = $sI;
+        $this->slideImageExt = $sIE;
         $this->question = $q;
     }
 
     function saveInDatabase($mysqli, $plcontentId) {
-        $this->question->saveInDatabase($mysqli);
+        $this->question->saveTextInDatabase($mysqli);
         if ($this->question->id == 0) {
             return;
         } else {
-            $statement = $mysqli->prepare("INSERT INTO Slides (slideNumber, slideContent, questionId, plcontentId) VALUES (?, ?, ?, ?)");
-            $statement->bind_param('isii', $this->slideNumber, $this->slideContent, $this->question->id, $plcontentId);
+            $statement = $mysqli->prepare("INSERT INTO Slides (slideNumber, slideType, slideContent, slideImage, slideImageExt, questionId, plcontentId) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $statement->bind_param('issssii', $this->slideNumber, $this->slideType, $this->slideContent, $this->slideImage, $this->slideImageExt, $this->question->id, $plcontentId);
             $statement->execute();
             $this->id = $statement->insert_id;
         }
@@ -133,8 +146,8 @@ class Slide {
         if ($this->question->id == 0) {
             return;
         } else {
-            $statement = $mysqli->prepare("UPDATE Slides SET slideNumber = ?, slideContent  = ?, questionId  = ?, plcontentId  = ? WHERE id = ?");
-            $statement->bind_param('isiii', $this->slideNumber, $this->slideContent, $this->question->id, $plcontentId, $this->id);
+            $statement = $mysqli->prepare("UPDATE Slides SET slideNumber = ?, slideType = ?, slideContent  = ?, slideImage = ?, slideImageExt = ?, questionId  = ?, plcontentId  = ? WHERE id = ?");
+            $statement->bind_param('issssiii', $this->slideNumber, $this->slideType, $this->slideContent, $this->slideImage, $this->slideImageExt, $this->question->id, $plcontentId, $this->id);
             $statement->execute();
         }
     }
@@ -155,6 +168,17 @@ class Question {
     public $answerC;
     public $answerD;
     public $correct;
+    public $questionI = null;
+    public $answerAI = null;
+    public $answerBI = null;
+    public $answerCI = null;
+    public $answerDI = null;
+    public $questionIExt = null;
+    public $answerAIExt = null;
+    public $answerBIExt = null;
+    public $answerCIExt = null;
+    public $answerDIExt = null;
+    public $course = 0;
 
     function __construct() {
         $a = func_get_args();
@@ -164,16 +188,17 @@ class Question {
         }
     }
 
-    function __construct6($q, $a, $b, $c, $d, $correct) {
+    function __construct7($q, $a, $b, $c, $d, $correct, $course) {
         $this->question = $q;
         $this->answerA = $a;
         $this->answerB = $b;
         $this->answerC = $c;
         $this->answerD = $d;
         $this->correct = $correct;
+        $this->course = $course;
     }
 
-    function __construct7($i, $q, $a, $b, $c, $d, $correct) {
+    function __construct8($i, $q, $a, $b, $c, $d, $correct, $course) {
         $this->id = $i;
         $this->question = $q;
         $this->answerA = $a;
@@ -181,12 +206,21 @@ class Question {
         $this->answerC = $c;
         $this->answerD = $d;
         $this->correct = $correct;
+        $this->course = $course;
     }
 
-    function saveInDatabase($mysqli) {
-        $statement = $mysqli->prepare("INSERT INTO Questions (question, answerA, answerB, answerC, answerD, correct) VALUES (?, ?, ?, ?, ?, ?)");
-        $statement->bind_param('ssssss', $this->question, $this->answerA, $this->answerB, $this->answerC, $this->answerD, $this->correct);
+    function saveTextInDatabase($mysqli) {
+        $statement = $mysqli->prepare("INSERT INTO Questions (question, answerA, answerB, answerC, answerD, correct, course) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $statement->bind_param('ssssssi', $this->question, $this->answerA, $this->answerB, $this->answerC, $this->answerD, $this->correct, $this->course);
         $statement->execute();
+        $this->id = $statement->insert_id;
+    }
+
+    function saveCompleteInDatabase($mysqli) {
+        $statement = $mysqli->prepare("INSERT INTO Questions (question, questionImageExt, questionImage, answerA, answerAImageExt, answerAImage, answerB, answerBImageExt, answerBImage, answerC, answerCImageExt, answerCImage, answerD, answerDImageExt, answerDImage, correct, course) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $statement->bind_param('ssssssssssssssssi', $this->question, $this->questionIExt, $this->questionI, $this->answerA, $this->answerAIExt, $this->answerAI, $this->answerB, $this->answerBIExt, $this->answerBI, $this->answerC, $this->answerCIExt, $this->answerCI, $this->answerD, $this->answerDIExt, $this->answerDI, $this->correct, $this->course);
+        $statement->execute();
+        //print_r($statement);
         $this->id = $statement->insert_id;
     }
 
@@ -200,5 +234,35 @@ class Question {
         $statement = $mysqli->prepare("UPDATE Questions SET question = ?, answerA = ?, answerB = ?, answerC = ?, answerD = ?, correct = ? WHERE id = ?");
         $statement->bind_param('ssssssi', $this->question, $this->answerA, $this->answerB, $this->answerC, $this->answerD, $this->correct, $this->id);
         $statement->execute();
+    }
+
+    function updateCompleteInDatabase($mysqli) {
+        $statement = $mysqli->prepare("UPDATE Questions SET question = ?, questionImageExt = ?, questionImage = ?, answerA = ?, answerAImageExt = ?, answerAImage = ?, answerB = ?, answerBImageExt = ?, answerBImage = ?, answerC = ?, answerCImageExt = ?, answerCImage = ?, answerD = ?, answerDImageExt = ?, answerDImage = ?, correct = ? WHERE id = ?");
+        $statement->bind_param('ssssssssssssssssi', $this->question, $this->questionIExt, $this->questionI, $this->answerA, $this->answerAIExt, $this->answerAI, $this->answerB, $this->answerBIExt, $this->answerBI, $this->answerC, $this->answerCIExt, $this->answerCI, $this->answerD, $this->answerDIExt, $this->answerDI, $this->correct, $this->id);
+        $statement->execute();
+    }
+}
+
+class Test {
+    public $id = 0;
+    public $title;
+    public $attempts;
+    public $lastDay;
+    public $courseSectionId;
+
+    function __construct() {
+        $a = func_get_args();
+        $i = func_num_args();
+        if (method_exists($this,$f='__construct'.$i)) {
+            call_user_func_array(array($this,$f),$a);
+        }
+    }
+
+    function __construct5($i, $t, $a, $l, $cs) {
+        $this->id = $i;
+        $this->title = $t;
+        $this->attempts = $a;
+        $this->lastDay = $l;
+        $this->courseSectionId = $cs;
     }
 }

@@ -10,6 +10,8 @@ require ("../Model/Course.php");
 require ("../Model/PLContent.php");
 session_start();
 
+unset($_SESSION["questionsInTest"]);
+
 $login = '';
 $signin = '';
 $home = 'class=""';
@@ -84,6 +86,39 @@ foreach ($sections as $section) {
         array_push($plcontents, new PLContent($i, $ct, null, $csi));
     }
     $section->plcontents = $plcontents;
+
+    $tests = array();
+    $statement->close();
+    $statement = $mysqli->prepare("SELECT * FROM Tests WHERE courseSectionId = ? ORDER BY lastDay ASC");
+    $statement->bind_param("i", $section->id);
+    $statement->execute();
+    $result = $statement->get_result();
+    while ($row = $result->fetch_row()) {
+        $i = $row[0];
+        $t = $row[1];
+        $a = $row[2];
+        $l = $row[3];
+        $cs = $row[4];
+        array_push($tests, new Test($i, $t, $a, $l, $cs));
+    }
+    $section->tests = $tests;
+
+    $assignments = array();
+    $statement->close();
+    $statement = $mysqli->prepare("SELECT * FROM Assignments WHERE courseSectionId = ? ORDER BY lastDay ASC");
+    $statement->bind_param("i", $section->id);
+    $statement->execute();
+    $result = $statement->get_result();
+    while ($row = $result->fetch_row()) {
+        $i = $row[0];
+        $t = $row[1];
+        $s = $row[2];
+        $l = $row[3];
+        $m = $row[4];
+        $cs = $row[5];
+        array_push($assignments, new Assignment($i, $t, $s, $l, $m, $cs));
+    }
+    $section->assignments = $assignments;
 }
 
 $mysqli->close();
@@ -151,8 +186,8 @@ $_SESSION["course"] = $course;
                     <ul class="nav nav-pills nav-stacked">
                         <li><h4 class="list-group-item-heading text-info">Programmed Learning Contents</h4></li>
                         <?php foreach ($section->plcontents as $plcontent) { ?>
-                            <li><a class="col-lg-8" href="../Control/MainController.php?do=editplc&plcId=<?php echo $plcontent->id; ?>"><?php echo $plcontent->contentTitle; ?></a></li>
                             <?php if (!($user instanceof Student)) { ?>
+                                <li class="col-lg-8"><a class="col-lg-12" href="../Control/MainController.php?do=editplc&plcId=<?php echo $plcontent->id; ?>"><?php echo $plcontent->contentTitle; ?></a></li>
                                 <div class="col-lg-2">
                                     <button type="button" class="btn btn-danger" onclick="deleteplcontent(<?php echo $plcontent->id; ?>,'section-<?php echo $section->id; ?>')">Delete</button>
                                 </div>
@@ -173,6 +208,76 @@ $_SESSION["course"] = $course;
                         <?php }}} ?>
                     </ul>
                 <?php } ?>
+                <?php if (count($section->assignments) >= 1) { ?>
+                    <ul class="nav nav-pills nav-stacked">
+                        <li><h4 class="list-group-item-heading text-info">Assignments</h4></li>
+                        <?php foreach ($section->assignments as $assignment) {
+                            if (!($user instanceof Student)) {?>
+                                <li class="col-lg-6"><a class="col-lg-12" href="../Control/MainController.php?do=editAssignment&assignmentId=<?php echo $assignment->id; ?>"><?php echo $assignment->title;?></a></li>
+                                <?php if (date("Y-m-d") > $assignment->lastDay) { ?>
+                                    <div class="col-lg-2">
+                                        <span class="text-danger">CLOSED</span>
+                                    </div>
+                                <?php } else { ?>
+                                    <div class="col-lg-2">
+                                        <span class="text-info"><?php echo "Close date: ".$assignment->lastDay?></span>
+                                    </div>
+                                <?php } ?>
+                                <div class="col-lg-2">
+                                    <button type="button" class="btn btn-danger" onclick="deleteAssignment(<?php echo $assignment->id; ?>,'section-<?php echo $section->id; ?>')">Delete</button>
+                                </div>
+                                <?php if (count($sections) > 1) { ?>
+                                    <div class="col-lg-2">
+                                        <div class="btn-group">
+                                            <a class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                Move to
+                                                <span class="caret"></span>
+                                            </a>
+                                            <ul class="dropdown-menu">
+                                                <?php foreach ($sections as $s) { ?>
+                                                    <li><a onclick="moveAssignment(<?php echo $assignment->id; ?>, <?php echo $s->id; ?>, 'section-<?php echo $assignment->courseSectionId; ?>')"><?php if($section != $s) { echo $s->sectionTitle; }?></a></li>
+                                                <?php }?>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                <?php }}} ?>
+                    </ul>
+                <?php } ?>
+                <?php if (count($section->tests) >= 1) { ?>
+                    <ul class="nav nav-pills nav-stacked">
+                        <li><h4 class="list-group-item-heading text-info">Tests</h4></li>
+                        <?php foreach ($section->tests as $test) {
+                            if (!($user instanceof Student)) {?>
+                                <li class="col-lg-6"><a href="../Control/MainController.php?do=editTest&testId=<?php echo $test->id; ?>" class="col-lg-12"><?php echo $test->title;?></a></li>
+                                <?php if (date("Y-m-d") > $test->lastDay) { ?>
+                                    <div class="col-lg-2">
+                                        <span class="text-danger">CLOSED</span>
+                                    </div>
+                                <?php } else { ?>
+                                    <div class="col-lg-2">
+                                        <span class="text-info"><?php echo "Close date: ".$test->lastDay?></span>
+                                    </div>
+                                <?php } ?>
+                                <div class="col-lg-2">
+                                    <button type="button" class="btn btn-danger" onclick="deleteTest(<?php echo $test->id; ?>,'section-<?php echo $section->id; ?>')">Delete</button>
+                                </div>
+                                <?php if (count($sections) > 1) { ?>
+                                    <div class="col-lg-2">
+                                        <div class="btn-group">
+                                            <a class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                Move to
+                                                <span class="caret"></span>
+                                            </a>
+                                            <ul class="dropdown-menu">
+                                                <?php foreach ($sections as $s) { ?>
+                                                    <li><a onclick="moveTest(<?php echo $test->id; ?>, <?php echo $s->id; ?>, 'section-<?php echo $test->courseSectionId; ?>')"><?php if($section != $s) { echo $s->sectionTitle; }?></a></li>
+                                                <?php }?>
+                                            </ul>
+                                        </div>
+                                    </div>
+                            <?php }}} ?>
+                    </ul>
+                <?php } ?>
                 <br/>
                 <div class="btn-group">
                     <a class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -181,6 +286,8 @@ $_SESSION["course"] = $course;
                     </a>
                     <ul class="dropdown-menu">
                         <li><a href="../Control/MainController.php?do=makeplc&courseSectionId=<?php echo $section->id; ?>">Programmed Learning content</a></li>
+                        <li><a href="../Control/MainController.php?do=makeTest&courseSectionId=<?php echo $section->id; ?>">Test of Multiple Choice Questions</a></li>
+                        <li><a href="../Control/MainController.php?do=makeAssignment&courseSectionId=<?php echo $section->id; ?>">Assignment</a></li>
                     </ul>
                 </div>
             </div>
@@ -200,6 +307,7 @@ $_SESSION["course"] = $course;
         <h4>Multiple Choice Questions and Tests</h4>
         <ul>
             <li><a href="NewMCQ.php">Create MCQ</a></li>
+            <li><a href="EditMCQs.php">Edit MCQs</a></li>
         </ul>
     <?php } ?>
 </aside>
@@ -276,7 +384,7 @@ $_SESSION["course"] = $course;
         } else if (response == "edited") {
             $("#sectionModal h3")[0].innerHTML = "New Section";
             $("#sectionModal button")[2].onclick = function() {saveSection();};
-        } else if (response == "updatedPLC" || response == "deletedPLC") {
+        } else if (response == "updatedPLC" || response == "deletedPLC" || response == "updatedTest" || response == "deletedTest" || response == "updatedAssignment" || response == "deletedAssignment") {
             window.location = "../View/CourseHome.php#" + sectionReload;
             location.reload();
         }
@@ -316,7 +424,7 @@ $_SESSION["course"] = $course;
         var sectionDescription = description.value;
         var courseId = $("#courseId")[0].value;
 
-        obj.childNodes[1].childNodes[1].innerHTML = sectionTitle;
+        obj.childNodes[1].childNodes[1].childNodes[1].innerHTML = sectionTitle;
         obj.childNodes[3].childNodes[1].innerHTML = sectionDescription;
 
         title.value = "";
@@ -335,7 +443,7 @@ $_SESSION["course"] = $course;
             error : function(jqXHR, textStatus, errorMessage) {
                 console.log(errorMessage);
             }
-        })
+        });
 
         event.preventDefault();
     }
@@ -392,6 +500,72 @@ $_SESSION["course"] = $course;
             data : {
                 "plcId": plcId,
                 "do": "deletePLC"
+            },
+            success : reloadPage,
+            error : function(jqXHR, textStatus, errorMessage) {
+                console.log(errorMessage);
+            }
+        });
+    }
+
+    function moveTest(testId, newSectionId, currentSectionId) {
+        sectionReload = currentSectionId;
+        $.ajax({
+            type : "post",
+            url : "../Control/UpdateTest.php",
+            data : {
+                "testId": testId,
+                "sectionId": newSectionId,
+                "do": "changeTestSection"
+            },
+            success : reloadPage,
+            error : function(jqXHR, textStatus, errorMessage) {
+                console.log(errorMessage);
+            }
+        });
+    }
+
+    function deleteTest(testId, sectionId) {
+        sectionReload = sectionId;
+        $.ajax({
+            type : "post",
+            url : "../Control/UpdateTest.php",
+            data : {
+                "testId": testId,
+                "do": "deleteTest"
+            },
+            success : reloadPage,
+            error : function(jqXHR, textStatus, errorMessage) {
+                console.log(errorMessage);
+            }
+        });
+    }
+
+    function moveAssignment(assignmentId, newSectionId, currentSectionId) {
+        sectionReload = currentSectionId;
+        $.ajax({
+            type : "post",
+            url : "../Control/UpdateAssignment.php",
+            data : {
+                "assignmentId": assignmentId,
+                "sectionId": newSectionId,
+                "do": "changeAssignmentSection"
+            },
+            success : reloadPage,
+            error : function(jqXHR, textStatus, errorMessage) {
+                console.log(errorMessage);
+            }
+        });
+    }
+
+    function deleteAssignment(assignmentId, sectionId) {
+        sectionReload = sectionId;
+        $.ajax({
+            type : "post",
+            url : "../Control/UpdateAssignment.php",
+            data : {
+                "assignmentId": assignmentId,
+                "do": "deleteAssignment"
             },
             success : reloadPage,
             error : function(jqXHR, textStatus, errorMessage) {

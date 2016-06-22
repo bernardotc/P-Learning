@@ -19,13 +19,10 @@ $courseActive = 'class=""';
 
 $user = $_SESSION["user"];
 $course = $_SESSION["course"];
-$courseSectionId = $_SESSION["courseSectionId"];
 if ($user == null) {
     header("Location: ../Control/MainController.php?do=logout");
 } else if ($course == null) {
     header("Location: ../View/Home.php");
-} else if ($courseSectionId == null) {
-    header("Location: ../View/CourseHome.php");
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -33,8 +30,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $slides = array();
     $numberOfSlides = $_POST["slides"];
     for ($i = 1; $i <= $numberOfSlides; $i++) {
-        $question = new Question($_POST["question".$i], $_POST["optionA".$i], $_POST["optionB".$i], $_POST["optionC".$i], $_POST["optionD".$i], $_POST["cAnswer".$i]);
-        array_push($slides, new Slide($i, $_POST["slideContent".$i], $question));
+        $question = new Question($_POST["question".$i], $_POST["optionA".$i], $_POST["optionB".$i], $_POST["optionC".$i], $_POST["optionD".$i], $_POST["cAnswer".$i], $course->id);
+        if ($_POST["typeOfSlide".$i] == "image") {
+            $imageFileType = pathinfo(basename($_FILES["slideContent".$i]["name"]), PATHINFO_EXTENSION);
+            // Check if image file is a actual image or fake image
+            $check = getimagesize($_FILES["slideContent".$i]["tmp_name"]);
+            if ($check !== false) {
+                //echo "File is an image - " . $check["mime"] . ".";
+                $uploadOk = 1;
+                // Check file size
+                if ($_FILES["slideContent" . $i]["size"] > 10000000) {
+                    //$errorMessage .= "Sorry, your file is too large. ";
+                    $uploadOk = 0;
+                }
+                // Allow certain file formats
+                //echo "IMAGE TYPE = " . $imageFileType;
+                if ($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg" && $imageFileType != "gif") {
+                    //$errorMessage .= "Sorry, only JPG, JPEG, PNG & GIF files are allowed. ";
+                    $uploadOk = 0;
+                }
+                // Check if $uploadOk is set to 0 by an error
+                if ($uploadOk == 0) {
+
+                    //$errorMessage .= "Your file was not uploaded. ";
+                    // if everything is ok, try to upload file
+                } else {
+                    $imageContent = file_get_contents($_FILES["slideContent".$i]["tmp_name"]);
+                    array_push($slides, new Slide($i, $_POST["typeOfSlide" . $i], null, $imageContent, $imageFileType, $question));
+                }
+            } else {
+                array_push($slides, new Slide($i, $_POST["typeOfSlide" . $i], null, null, null, $question));
+            }
+        } else if ($_POST["typeOfSlide".$i] == "video") {
+            $videoLink = str_replace("watch?v=", "embed/",  $_POST["slideContent".$i]);
+            echo $videoLink;
+            array_push($slides, new Slide($i, $_POST["typeOfSlide" . $i], $videoLink, null, null, $question));
+        } else {
+            array_push($slides, new Slide($i, $_POST["typeOfSlide" . $i], $_POST["slideContent" . $i], null, null, $question));
+        }
     }
     $plcontent = new PLContent($_POST["contentTitle"], $slides, $_SESSION["courseSectionId"]);
     //print_r($_SESSION);
@@ -45,9 +78,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         for ($i = 0; $i < count($previousplc->slides); $i++) {
             $plcontent->slides[$i]->id = $previousplc->slides[$i]->id;
             $plcontent->slides[$i]->question->id = $previousplc->slides[$i]->question->id;
+            $plcontent->slides[$i]->slideImage = $previousplc->slides[$i]->slideImage;
+            $plcontent->slides[$i]->slideImageExt = $previousplc->slides[$i]->slideImageExt;
+
         }
+        //print_r($plcontent);
         $_SESSION["plcontent"] = $plcontent;
-        print_r($plcontent);
         header("Location: ../Control/MainController.php?do=editPLContent");
     } else {
         $_SESSION["plcontent"] = $plcontent;
@@ -80,8 +116,11 @@ if (isset($_SESSION["plcId"])) {
     while ($row = $result->fetch_row()) {
         $sI = $row[0];
         $sN = $row[1];
-        $sC = $row[2];
-        $qI = $row[3];
+        $sT = $row[2];
+        $sC = $row[3];
+        $sIm = $row[4];
+        $sIE = $row[5];
+        $qI = $row[6];
 
         $statement2 = $mysqli->prepare("SELECT * FROM Questions WHERE id = ?");
         $statement2->bind_param("i", $qI);
@@ -90,21 +129,23 @@ if (isset($_SESSION["plcId"])) {
         while ($row = $result2->fetch_row()) {
             $i = $row[0];
             $q = $row[1];
-            $a = $row[2];
-            $b = $row[3];
-            $c = $row[4];
-            $d = $row[5];
-            $cA = $row[6];
+            $a = $row[4];
+            $b = $row[7];
+            $c = $row[10];
+            $d = $row[13];
+            $cA = $row[16];
+            $co = $row[17];
 
-            $question = new Question($i, $q, $a, $b, $c, $d, $cA);
+            $question = new Question($i, $q, $a, $b, $c, $d, $cA, $co);
         }
-        array_push($slides, new Slide($sI, $sN, $sC, $question));
+        array_push($slides, new Slide($sI, $sN, $sT, $sC, $sIm, $sIE, $question));
     }
     $plc->slides = $slides;
 
     $mysqli->close();
     $_SESSION["courseSectionId"] = $plc->courseSectionId;
     $_SESSION["previousPLC"] = $plc;
+    print_r($_SESSION);
 }
 
 ?>
@@ -145,7 +186,7 @@ if (isset($_SESSION["plcId"])) {
 <h4><?php echo $course->code.' - '.$course->title; ?></h4>
 <hr/>
 <section class="col-lg-10">
-    <form id="plform" method="post">
+    <form id="plform" method="post" enctype="multipart/form-data">
         <div class="input-group">
             <span class="input-group-addon">Content Title</span>
             <input class="form-control" type="text" id="contentTitle" name="contentTitle" required placeholder="e.g. Force, Synonyms, Division..." value="<?php if(isset($_SESSION["plcId"])) { echo $plc->contentTitle;}?>"/>
@@ -158,9 +199,29 @@ if (isset($_SESSION["plcId"])) {
                 $i++; ?>
                 <fieldset id="slide<?php echo $i;?>" style="text-align: center">
                     <h3>Slide <?php echo $i;?></h3>
-                    <div id="slideContent<?php echo $i;?>" class="col-lg-10" style="background-color: #ffffff; max-height: 400px;">
-                        <?php echo $slide->slideContent;?>
-                    </div>
+                    <?php if ($slide->slideType == "text") { ?>
+                        <input type="hidden" name="typeOfSlide<?php echo $i;?>" value="text">
+                        <div id="slideContent<?php echo $i;?>" class="col-lg-10" style="background-color: #ffffff; max-height: 400px;">
+                            <?php echo $slide->slideContent;?>
+                        </div>
+                    <?php } else if ($slide->slideType == "video") { ?>
+                        <div class="col-lg-6">
+                            <iframe width="400" height="300px" src="<?php echo $slide->slideContent?>">
+                            </iframe>
+                        </div>
+                        <input type="hidden" name="typeOfSlide<?php echo $i;?>" value="video">
+                        <div class="col-lg-4">
+                            <input type="text" class="form-control" name="slideContent<?php echo $i;?>" value="<?php echo $slide->slideContent?>" />
+                        </div>
+                    <?php } else if ($slide->slideType == "image") { ?>
+                        <div class="col-lg-6">
+                            <img src="data:image/<?php echo $slide->slideImageExt;?>;base64,<?php echo base64_encode($slide->slideImage);?>" width="400px"/>
+                        </div>
+                        <input type="hidden" name="typeOfSlide<?php echo $i;?>" value="image">
+                        <div class="col-lg-4">
+                            <input type="file" class="form-control" name="slideContent<?php echo $i;?>"/>
+                        </div>
+                    <?php } ?>
                     <div class="col-lg-2">
                         <button id="<?php echo $i;?>" type="button" class="btn btn-danger" style="margin-bottom: 2%" onclick="deleteSlide(this.id, <?php echo $_SESSION["plcId"];?>)">Delete</button>
                     </div>
@@ -199,8 +260,14 @@ if (isset($_SESSION["plcId"])) {
 <aside class="col-lg-2">
     <br/>
     <div class="list-group">
-        <a class="list-group-item" onclick="addSlide()">
-            <h5 class="list-group-item-heading">Add Slide</h5>
+        <a class="list-group-item" onclick="addTextSlide()">
+            <h5 class="list-group-item-heading">Add Text Slide</h5>
+        </a>
+        <a class="list-group-item" onclick="addVideoSlide()">
+            <h5 class="list-group-item-heading">Add Video Slide</h5>
+        </a>
+        <a class="list-group-item" onclick="addImageSlide()">
+            <h5 class="list-group-item-heading">Add Image Slide</h5>
         </a>
         <a class="list-group-item" onclick="save()">
             <h5 class="list-group-item-heading">Save Content</h5>
@@ -214,7 +281,7 @@ if (isset($_SESSION["plcId"])) {
     var numberOfSlideToEditContent = 0;
     var textEditor;
     var slideIdToReload;
-    function addSlide() {
+    function addTextSlide() {
         slideNumber++;
         var fieldset = $("<fieldset/>", {
             id: "slide" + slideNumber
@@ -222,6 +289,11 @@ if (isset($_SESSION["plcId"])) {
         var h3 = $("<h3/>", {
            text: "Slide " + slideNumber
         });
+        var typeOfSlide = $("<input>", {
+            type: "hidden",
+            name: "typeOfSlide" + slideNumber,
+            value: "text"
+        }).css("display", "none");
         var container = $("<div/>", {
             id: "slideContent" + slideNumber,
             text: "Click to edit."
@@ -243,6 +315,7 @@ if (isset($_SESSION["plcId"])) {
             id: slideNumber
         }).addClass("btn btn-danger").css("margin-bottom", "2%").on("click", function(event) {deleteSlide(this.id);});
         fieldset.append(h3);
+        fieldset.append(typeOfSlide);
         fieldset.append(container);
         fieldset.append(buttonContainer);
         //container.append(textarea);
@@ -253,6 +326,82 @@ if (isset($_SESSION["plcId"])) {
             selector: "#slideContent" + slideNumber,
             inline: true
         });
+    }
+
+    function addVideoSlide() {
+        slideNumber++;
+        var fieldset = $("<fieldset/>", {
+            id: "slide" + slideNumber
+        }).css("text-align", "center");
+        var h3 = $("<h3/>", {
+            text: "Slide " + slideNumber
+        });
+        var typeOfSlide = $("<input>", {
+            type: "hidden",
+            name: "typeOfSlide" + slideNumber,
+            value: "video"
+        }).css("display", "none");
+        var container = $("<div/>", {
+        }).addClass("col-lg-10");
+        var slide = $("<input/>", {
+            type: "text",
+            id: "slideContent" + slideNumber,
+            name: "slideContent" + slideNumber,
+            placeholder: "Insert YouTube video link here."
+        }).addClass("form-control");
+        var buttonContainer = $("<div/>").addClass("col-lg-2");
+        var buttonDelete = $("<button/>", {
+            type: "button",
+            text: "Delete",
+            id: slideNumber
+        }).addClass("btn btn-danger").css("margin-bottom", "2%").on("click", function(event) {deleteSlide(this.id);});
+        fieldset.append(h3);
+        fieldset.append(typeOfSlide);
+        fieldset.append(container);
+        container.append(slide);
+        fieldset.append(buttonContainer);
+        //container.append(textarea);
+        buttonContainer.append(buttonDelete);
+        fieldset.append("<br/>").append("<br/>").append(addQuestion).append($("<hr/>"));
+        $('#slidesC').append(fieldset);
+    }
+
+    function addImageSlide() {
+        slideNumber++;
+        var fieldset = $("<fieldset/>", {
+            id: "slide" + slideNumber
+        }).css("text-align", "center");
+        var h3 = $("<h3/>", {
+            text: "Slide " + slideNumber
+        });
+        var typeOfSlide = $("<input>", {
+            type: "hidden",
+            name: "typeOfSlide" + slideNumber,
+            value: "image"
+        }).css("display", "none");
+        var container = $("<div/>", {
+        }).addClass("col-lg-10");
+        var slide = $("<input/>", {
+            type: "file",
+            id: "slideContent" + slideNumber,
+            name: "slideContent" + slideNumber,
+            placeholder: "Insert YouTube video link here."
+        }).addClass("form-control");
+        var buttonContainer = $("<div/>").addClass("col-lg-2");
+        var buttonDelete = $("<button/>", {
+            type: "button",
+            text: "Delete",
+            id: slideNumber
+        }).addClass("btn btn-danger").css("margin-bottom", "2%").on("click", function(event) {deleteSlide(this.id);});
+        fieldset.append(h3);
+        fieldset.append(typeOfSlide);
+        fieldset.append(container);
+        container.append(slide);
+        fieldset.append(buttonContainer);
+        //container.append(textarea);
+        buttonContainer.append(buttonDelete);
+        fieldset.append("<br/>").append("<br/>").append(addQuestion).append($("<hr/>"));
+        $('#slidesC').append(fieldset);
     }
 
     function addQuestion() {
@@ -300,7 +449,7 @@ if (isset($_SESSION["plcId"])) {
     }
 
     function reloadPage(response) {
-        alert(response);
+        //alert(response);
         if (response == "deletedAndUpdatedSlides") {
             window.location = "../View/MakePLContent.php#" + slideIdToReload;
             location.reload();
